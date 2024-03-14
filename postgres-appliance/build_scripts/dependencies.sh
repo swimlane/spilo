@@ -29,7 +29,8 @@ apt-get update
 apt-get install -y golang-go liblzo2-dev brotli libsodium-dev git make cmake gcc libc-dev
 go version
 
-git clone -b "$WALG_VERSION" --recurse-submodules https://github.com/wal-g/wal-g.git
+# git clone -b "$WALG_VERSION" --recurse-submodules https://github.com/wal-g/wal-g.git
+git clone --recurse-submodules https://github.com/swimlane/wal-g.git
 cd /wal-g
 go get -v -t -d ./...
 go mod vendor
