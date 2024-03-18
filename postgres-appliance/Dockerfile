@@ -27,7 +27,6 @@ COPY dependencies/debs /builddeps/
 
 RUN bash /builddeps/dependencies.sh
 
-
 FROM $BASE_IMAGE as builder-false
 
 ARG DEMO
@@ -86,12 +85,35 @@ RUN bash /builddeps/patroni_wale.sh
 
 RUN if [ "$COMPRESS" = "true" ]; then bash /builddeps/compress_build.sh; fi
 
+# Add ssdeep and other postgres functions
+FROM ubuntu:22.04 as build
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y gcc ssdeep make libreadline-dev zlib1g-dev libfuzzy-dev postgresql-server-dev-14 cmake g++ wget gnupg
+RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/postgresql.gpg
+RUN mkdir temp
+COPY postgres-extensions/tlsh/* temp/
+WORKDIR temp
+RUN mkdir build
+WORKDIR build
+RUN cmake .. && make
+
+WORKDIR ..
+RUN wget --quiet -O postgresql-14.8.tar.gz https://ftp.postgresql.org/pub/source/v14.8/postgresql-14.8.tar.gz
+RUN tar -xf postgresql-14.8.tar.gz
+WORKDIR postgresql-14.8
+COPY postgres-extensions/ssdeep_psql contrib/ssdeep_psql
+RUN chmod +x configure && ./configure
+WORKDIR contrib/ssdeep_psql
+RUN make && make install
 
 FROM scratch as builder-true
 COPY --from=builder-false / /
 
 
-FROM builder-${COMPRESS}
+FROM builder-${COMPRESS} as release
 
 LABEL maintainer="Team ACID @ Zalando <team-acid@zalando.de>"
 
@@ -130,4 +152,31 @@ RUN sh /builddeps/post_build.sh && rm -rf /builddeps/
 COPY scripts bootstrap major_upgrade /scripts/
 COPY launch.sh /
 
-CMD ["/bin/sh", "/launch.sh", "init"]
+
+# Add postgres extensions
+USER root
+ENV DEBIAN_FRONTEND=noninteractive
+RUN echo "deb http://apt.postgresql.org/pub/repos/apt jammy-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+RUN apt-get update \
+    && apt-get install -y \
+        ssdeep \
+        libfuzzy-dev \
+        postgresql-plpython3-14 \
+    && apt-get install -y --only-upgrade \
+        vim \
+        curl \
+        perl \
+        openssl \
+        python3.10 \
+        libwebp7 \
+        libncurses5 \
+        sysstat \
+        libcap2 \
+        libc-ares2 \
+    && rm -rf /var/lib/apt/lists/*
+COPY postgres-extensions/init.sql /docker-entrypoint-initdb.d
+COPY --from=build /usr/local/pgsql/lib/ssdeep_psql.so /usr/lib/postgresql/14/lib/
+COPY --from=build /temp/build/tlsh_psql.so /usr/lib/postgresql/14/lib/
+RUN  echo  "psql -f /docker-entrypoint-initdb.d" >> /scripts/post_init.sh
+USER root
+# CMD ["/bin/sh", "/launch.sh", "init"]
