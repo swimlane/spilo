@@ -179,4 +179,4 @@ COPY --from=build /usr/local/pgsql/lib/ssdeep_psql.so /usr/lib/postgresql/14/lib
 COPY --from=build /temp/build/tlsh_psql.so /usr/lib/postgresql/14/lib/
 RUN  echo  "psql -f /docker-entrypoint-initdb.d" >> /scripts/post_init.sh
 USER root
-# CMD ["/bin/sh", "/launch.sh", "init"]
+CMD ["/bin/sh", "/launch.sh", "init"]
