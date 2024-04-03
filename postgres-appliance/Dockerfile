@@ -15,18 +15,6 @@ COPY build_scripts/locales.sh /builddeps/
 RUN bash /builddeps/locales.sh
 
 
-FROM $BASE_IMAGE as dependencies-builder
-
-ARG DEMO
-
-ENV WALG_VERSION=v2.0.1
-
-COPY build_scripts/dependencies.sh /builddeps/
-
-COPY dependencies/debs /builddeps/
-
-RUN bash /builddeps/dependencies.sh
-
 FROM $BASE_IMAGE as builder-false
 
 ARG DEMO
@@ -40,7 +28,6 @@ COPY --from=ubuntu-18 /usr/lib/locale/locale-archive /usr/lib/locale/locale-arch
 
 COPY cron_unprivileged.c dependencies/src /builddeps/
 COPY build_scripts/base.sh /builddeps/
-COPY --from=dependencies-builder /builddeps/*.deb /builddeps/
 
 ARG PGVERSION
 ARG TIMESCALEDB
@@ -69,9 +56,6 @@ ENV POSTGIS_VERSION=3.4 \
 
 WORKDIR /builddeps
 RUN bash base.sh
-
-# Install wal-g
-COPY --from=dependencies-builder /builddeps/wal-g /usr/local/bin/
 
 COPY build_scripts/patroni_wale.sh build_scripts/compress_build.sh dependencies/requirements.txt /builddeps/
 
