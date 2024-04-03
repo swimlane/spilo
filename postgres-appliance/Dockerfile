@@ -73,7 +73,7 @@ RUN bash base.sh
 # Install wal-g
 COPY --from=dependencies-builder /builddeps/wal-g /usr/local/bin/
 
-COPY build_scripts/patroni_wale.sh build_scripts/compress_build.sh /builddeps/
+COPY build_scripts/patroni_wale.sh build_scripts/compress_build.sh dependencies/requirements.txt /builddeps/
 
 # Install patroni and wal-e
 ENV PATRONIVERSION=3.2.2
