@@ -1,4 +1,5 @@
-\c swimlane
+CREATE DATABASE swimlane;
+\c swimlane;
 CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
 CREATE EXTENSION IF NOT EXISTS plpython3u;
 CREATE OR REPLACE FUNCTION public.fuzzy_hash(TEXT) RETURNS TEXT AS '/usr/lib/postgresql/14/lib/ssdeep_psql.so', 'pg_fuzzy_hash' LANGUAGE C;
